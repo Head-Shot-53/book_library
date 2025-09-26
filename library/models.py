@@ -22,7 +22,7 @@ class Author(models.Model):
     
 class Book(models.Model):
     title = models.CharField(max_length=150, verbose_name='Назва')
-    slug = models.SlugField(verbose_name='URL', unique=True)
+    slug = models.SlugField(verbose_name='URL', unique=True, blank=True)
     year = models.IntegerField(verbose_name='Рік видання', default=0)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, verbose_name='Автор', related_name='books', blank=True, null=True)
     category = models.ManyToManyField(Category, verbose_name='Жанр', related_name='books')
