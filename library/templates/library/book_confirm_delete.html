@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Видалити книгу{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body text-center">
+    <h3>Видалити книгу "{{ book.title }}"?</h3>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Так, видалити</button>
+      <a href="{% url 'book_detail' book.slug %}" class="btn btn-secondary">Скасувати</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
