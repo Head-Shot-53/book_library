@@ -2,6 +2,11 @@ from django import forms
 from .models import * 
 
 class BookForm(forms.ModelForm):
+    author_name = forms.CharField(
+        label = 'Автор',
+        help_text='Введіть автора'
+    )
+
     class Meta:
         model = Book
         fields = ['title', 'author', 'year']
