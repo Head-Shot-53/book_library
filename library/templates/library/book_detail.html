@@ -1,11 +1,17 @@
 {% extends 'base.html' %}
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
-<h1>{{ book.title }}</h1>
-<p><strong>Автор:</strong> {{ book.author }}</p>
-<p><strong>Жанр:</strong> {% for cat in book.category.all %} {{ cat.title }} {% endfor %}</p>
-<p><strong>Рік:</strong> {{ book.year }}</p>
-<p><em>Додано: {{ book.created|date:"d.m.Y H:i" }}</em></p>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title">{{ book.title }}</h2>
+    <p><strong>Автор:</strong> {{ book.author }}</p>
+    <p><strong>Жанр:</strong> {% for cat in book.category.all %} {{ cat.title }} {% empty %} — {% endfor %}</p>
+    <p><strong>Рік:</strong> {{ book.year }}</p>
+    <p class="text-muted"><em>Додано: {{ book.created|date:"d.m.Y H:i" }}</em></p>
 
-<a href="{% url 'book_list' %}" class="btn btn-secondary">Назад</a>
+    <a href="{% url 'book_update' book.slug %}" class="btn btn-warning">✏️ Редагувати</a>
+    <a href="{% url 'book_delete' book.slug %}" class="btn btn-danger">🗑 Видалити</a>
+    <a href="{% url 'book_list' %}" class="btn btn-secondary">⬅ Назад</a>
+  </div>
+</div>
 {% endblock %}
