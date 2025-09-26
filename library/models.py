@@ -38,7 +38,7 @@ class Book(models.Model):
         return self.title
     
     def save(self, *args, **kwargs):
-        if not self.slug:  # 👈 генеруємо тільки якщо slug порожній
+        if not self.slug:  #генеруємо тільки якщо slug порожній
             base_slug = slugify(self.title)
             slug = base_slug
             counter = 1
