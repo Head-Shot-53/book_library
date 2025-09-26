@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Список книг{% endblock %}
+{% block content %}
+<h1 class="mb-3">Список книг</h1>
+
+<form method="get" class="mb-3">
+    <input type="text" name="q" placeholder="Пошук..." class="form-control" value="{{ request.GET.q }}">
+</form>
+
+<div class="row">
+    {% for book in books %}
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ book.title }}</h5>
+                <p class="card-text"><strong>Автор:</strong> {{ book.author }}</p>
+                <p class="card-text"><strong>Рік:</strong> {{ book.year }}</p>
+                <a href="{% url 'book_detail' book.slug %}" class="btn btn-primary">Детальніше</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <p>Книг поки що немає.</p>
+    {% endfor %}
+</div>
+{% endblock %}
