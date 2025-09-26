@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+<h1>{{ book.title }}</h1>
+<p><strong>Автор:</strong> {{ book.author }}</p>
+<p><strong>Жанр:</strong> {% for cat in book.category.all %} {{ cat.title }} {% endfor %}</p>
+<p><strong>Рік:</strong> {{ book.year }}</p>
+<p><em>Додано: {{ book.created|date:"d.m.Y H:i" }}</em></p>
+
+<a href="{% url 'book_list' %}" class="btn btn-secondary">Назад</a>
+{% endblock %}
