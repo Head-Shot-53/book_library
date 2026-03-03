@@ -20,6 +20,10 @@ select = [
 
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+"config/settings/local.py" = ["F403", "F405"]
+"config/settings/production.py" = ["F403", "F405"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
