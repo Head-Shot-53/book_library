@@ -114,7 +114,7 @@ def test_user_does_not_see_inactive_resources(api_client, user, category):
 
     assert response.status_code == status.HTTP_200_OK
 
-    names = [item["name"] for item in response.data]
+    names = [item["name"] for item in response.data["results"]]
 
     assert "Active Room" in names
     assert "Inactive Room" not in names

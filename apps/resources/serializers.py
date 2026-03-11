@@ -1,6 +1,15 @@
 from rest_framework import serializers
 
-from .models import Resource
+from .models import Resource, ResourceCategory
+
+
+class ResourceCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResourceCategory
+
+        fields = ("id", "name", "slug", "description", "created_at", "updated_at")
+
+        read_only_fields = ("id", "created_at", "updated_at")
 
 
 class ResourceSerializer(serializers.ModelSerializer):
