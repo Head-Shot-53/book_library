@@ -44,6 +44,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     "apps.accounts.apps.AccountsConfig",
     "apps.resources.apps.ResourcesConfig",
+    "apps.bookings.apps.BookingsConfig",
 ]
 
 
