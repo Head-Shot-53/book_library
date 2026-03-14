@@ -5,8 +5,8 @@ from django.utils import timezone
 
 from apps.resources.models import Resource
 
-from .exceptions import BookingValidationError
-from .models import Booking
+from .exceptions import BookingConflictError, BookingValidationError
+from .models import Booking, BookingStatus
 
 
 def validate_booking_creation(
@@ -104,6 +104,8 @@ def create_booking(
 ) -> Booking:
     validate_booking_creation(resource=resource, start_at=start_at, end_at=end_at)
 
+    _validate_no_booking_conflict(resource=resource, start_at=start_at, end_at=end_at)
+
     return Booking.objects.create(
         user=user,
         resource=resource,
@@ -112,3 +114,39 @@ def create_booking(
         title=title,
         notes=notes,
     )
+
+
+def check_booking_conflict(
+    *,
+    resource: Resource,
+    start_at: datetime,
+    end_at: datetime,
+    exclude_booking_id: int | None = None,
+) -> bool:
+    queryset = Booking.objects.filter(
+        resource=resource, start_at__lt=end_at, end_at__gt=start_at
+    ).exclude(
+        status=BookingStatus.CANCELLED,
+    )
+
+    if exclude_booking_id is not None:
+        queryset = queryset.exclude(pk=exclude_booking_id)
+
+    return queryset.exists()
+
+
+def _validate_no_booking_conflict(
+    *,
+    resource: Resource,
+    start_at: datetime,
+    end_at: datetime,
+    exclude_booking_id: int | None = None,
+) -> None:
+
+    if check_booking_conflict(
+        resource=resource,
+        start_at=start_at,
+        end_at=end_at,
+        exclude_booking_id=exclude_booking_id,
+    ):
+        raise BookingConflictError()

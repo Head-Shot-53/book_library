@@ -4,3 +4,10 @@ class BookingValidationError(Exception):
         self.code = code
 
         super().__init__(message)
+
+
+class BookingConflictError(BookingValidationError):
+    def __init__(
+        self, message: str = ("Resource is already booked for this time period.")
+    ):
+        super().__init__(message, code="booking_conflict")
