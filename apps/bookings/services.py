@@ -92,6 +92,10 @@ def _validate_working_hours(
         )
 
 
+def _lock_resource(*, resource: Resource) -> Resource:
+    return Resource.objects.select_for_update().get(pk=resource.pk)
+
+
 @transaction.atomic
 def create_booking(
     *,
@@ -102,13 +106,19 @@ def create_booking(
     title: str,
     notes: str = "",
 ) -> Booking:
-    validate_booking_creation(resource=resource, start_at=start_at, end_at=end_at)
+    locked_resource = _lock_resource(resource=resource)
 
-    _validate_no_booking_conflict(resource=resource, start_at=start_at, end_at=end_at)
+    validate_booking_creation(
+        resource=locked_resource, start_at=start_at, end_at=end_at
+    )
+
+    _validate_no_booking_conflict(
+        resource=locked_resource, start_at=start_at, end_at=end_at
+    )
 
     return Booking.objects.create(
         user=user,
-        resource=resource,
+        resource=locked_resource,
         start_at=start_at,
         end_at=end_at,
         title=title,
