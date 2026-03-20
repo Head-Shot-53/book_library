@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from apps.resources.models import Resource
 
-from .exceptions import BookingConflictError, BookingValidationError
+from .exceptions import BookingConflictError, BookingStateError, BookingValidationError
 from .models import Booking, BookingStatus
 
 
@@ -160,3 +160,136 @@ def _validate_no_booking_conflict(
         exclude_booking_id=exclude_booking_id,
     ):
         raise BookingConflictError()
+
+
+def _lock_booking(*, booking: Booking) -> Booking:
+    return (
+        Booking.objects.select_for_update()
+        .select_related("resource", "user")
+        .get(pk=booking.pk)
+    )
+
+
+def _lock_resources_by_ids(*, resource_ids: list[int]) -> dict[int, Resource]:
+    unique_ids = sorted(set(resource_ids))
+
+    resources = list(
+        Resource.objects.select_for_update().filter(pk__in=unique_ids).order_by("pk")
+    )
+
+    if len(resources) != len(unique_ids):
+        raise Resource.DoesNotExist("One or more resources do not exist.")
+
+    return {resource.pk: resource for resource in resources}
+
+
+def _validate_booking_can_be_updated(*, booking: Booking) -> None:
+    if booking.status in {BookingStatus.CANCELLED, BookingStatus.COMPLETED}:
+        raise BookingStateError(
+            "Cancelled or completed bookings cannot be updated.",
+            code="booking_not_editable",
+        )
+
+    if booking.start_at <= timezone.now():
+        raise BookingStateError(
+            "Booking cannot be updated after it has started.",
+            code="booking_already_started",
+        )
+
+
+@transaction.atomic
+def update_booking(
+    *,
+    booking: Booking,
+    resource: Resource | None = None,
+    start_at: datetime | None = None,
+    end_at: datetime | None = None,
+    title: str | None = None,
+    notes: str | None = None,
+) -> Booking:
+    locked_booking = _lock_booking(booking=booking)
+
+    _validate_booking_can_be_updated(booking=locked_booking)
+
+    target_resource_id = (
+        resource.pk if resource is not None else locked_booking.resource_id
+    )
+
+    locked_resources = _lock_resources_by_ids(
+        resource_ids=[locked_booking.resource_id, target_resource_id]
+    )
+
+    target_resource = locked_resources[target_resource_id]
+
+    target_start_at = start_at if start_at is not None else locked_booking.start_at
+
+    target_end_at = end_at if end_at is not None else locked_booking.end_at
+
+    validate_booking_creation(
+        resource=target_resource, start_at=target_start_at, end_at=target_end_at
+    )
+
+    _validate_no_booking_conflict(
+        resource=target_resource,
+        start_at=target_start_at,
+        end_at=target_end_at,
+        exclude_booking_id=locked_booking.id,
+    )
+
+    locked_booking.resource = target_resource
+    locked_booking.start_at = target_start_at
+    locked_booking.end_at = target_end_at
+
+    update_fields = ["resource", "start_at", "end_at", "updated_at"]
+
+    if title is not None:
+        locked_booking.title = title
+        update_fields.append("title")
+
+    if notes is not None:
+        locked_booking.notes = notes
+        update_fields.append("notes")
+
+    locked_booking.save(update_fields=update_fields)
+
+    return locked_booking
+
+
+@transaction.atomic
+def cancel_booking(*, booking: Booking) -> Booking:
+    locked_booking = _lock_booking(booking=booking)
+
+    if locked_booking.status not in {BookingStatus.PENDING, BookingStatus.CONFIRMED}:
+        raise BookingStateError(
+            "Only pending or confirmed bookings can be cancelled.",
+            code="booking_cannot_be_cancelled",
+        )
+
+    locked_booking.status = BookingStatus.CANCELLED
+    locked_booking.cancelled_at = timezone.now()
+
+    locked_booking.save(update_fields=["status", "cancelled_at", "updated_at"])
+
+    return locked_booking
+
+
+@transaction.atomic
+def complete_booking(*, booking: Booking) -> Booking:
+    locked_booking = _lock_booking(booking=booking)
+
+    if locked_booking.status != BookingStatus.CONFIRMED:
+        raise BookingStateError(
+            "Only confirmed bookings can be completed.",
+            code="booking_cannot_be_completed",
+        )
+
+    if locked_booking.end_at > timezone.now():
+        raise BookingStateError(
+            "Booking cannot be completed before it ends.", code="booking_not_finished"
+        )
+
+    locked_booking.status = BookingStatus.COMPLETED
+
+    locked_booking.save(update_fields=["status", "updated_at"])
+
+    return locked_booking
