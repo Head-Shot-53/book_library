@@ -1,8 +1,11 @@
 from django.db.models import ProtectedError
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.accounts.models import UserRole
+from apps.bookings.selectors import get_resource_availability
+from apps.bookings.serializers import ResourceAvailabilityQuerySerializer
 
 from .filters import ResourceFilter
 from .models import Resource, ResourceCategory
@@ -65,3 +68,21 @@ class ResourceViewSet(viewsets.ModelViewSet):
         resource.save(update_fields=["is_active", "updated_at"])
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["get"])
+    def availability(self, request, pk=None):
+        resource = self.get_object()
+
+        query_serializer = ResourceAvailabilityQuerySerializer(
+            data=request.query_params
+        )
+
+        query_serializer.is_valid(raise_exception=True)
+
+        target_date = query_serializer.validated_data["date"]
+
+        availability = get_resource_availability(
+            resource=resource, target_date=target_date
+        )
+
+        return Response(availability, status=status.HTTP_200_OK)

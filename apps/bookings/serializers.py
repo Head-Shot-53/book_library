@@ -80,3 +80,7 @@ class BookingUpdateSerializer(serializers.Serializer):
             )
 
         return super().to_internal_value(data)
+
+
+class ResourceAvailabilityQuerySerializer(serializers.Serializer):
+    date = serializers.DateField()

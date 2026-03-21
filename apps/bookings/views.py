@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .exceptions import BookingConflictError, BookingValidationError
+from .filters import BookingFilter
 from .selectors import can_manage_all_bookings, get_bookings_for_user
 from .serializers import (
     BookingCreateSerializer,
@@ -18,6 +19,12 @@ class BookingViewSet(
     mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
     permission_classes = [IsAuthenticated]
+
+    filterset_class = BookingFilter
+
+    ordering_fields = ("start_at", "end_at", "created_at", "status")
+
+    ordering = ("-start_at",)
 
     http_method_names = ["get", "post", "patch", "head", "options"]
 
