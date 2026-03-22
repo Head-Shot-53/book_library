@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import UserRole
+from apps.audit.models import BookingHistory, BookingHistoryAction
 from apps.bookings.models import Booking, BookingStatus
 from apps.resources.models import Resource, ResourceCategory
 
@@ -493,3 +494,27 @@ def test_manager_can_cancel_any_booking(api_client, manager, booking):
     booking.refresh_from_db()
 
     assert booking.status == BookingStatus.CANCELLED
+
+
+@pytest.mark.django_db
+def test_manager_is_recorded_as_booking_creator(api_client, manager, user, resource):
+    api_client.force_authenticate(user=manager)
+
+    response = api_client.post(
+        reverse("bookings:booking-list"),
+        {
+            "user": user.id,
+            "resource": resource.id,
+            "start_at": future_datetime(10).isoformat(),
+            "end_at": future_datetime(11).isoformat(),
+            "title": "Manager-created booking",
+        },
+        format="json",
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+
+    history = BookingHistory.objects.get(action=BookingHistoryAction.CREATED)
+
+    assert history.changed_by == manager
+    assert history.booking.user == user

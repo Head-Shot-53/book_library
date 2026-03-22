@@ -3,6 +3,8 @@ from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
 
+from apps.audit.models import BookingHistoryAction
+from apps.audit.services import get_booking_snapshot, record_booking_history
 from apps.resources.models import Resource
 
 from .exceptions import BookingConflictError, BookingStateError, BookingValidationError
@@ -105,6 +107,7 @@ def create_booking(
     end_at: datetime,
     title: str,
     notes: str = "",
+    changed_by=None,
 ) -> Booking:
     locked_resource = _lock_resource(resource=resource)
 
@@ -116,7 +119,7 @@ def create_booking(
         resource=locked_resource, start_at=start_at, end_at=end_at
     )
 
-    return Booking.objects.create(
+    booking = Booking.objects.create(
         user=user,
         resource=locked_resource,
         start_at=start_at,
@@ -124,6 +127,16 @@ def create_booking(
         title=title,
         notes=notes,
     )
+
+    record_booking_history(
+        booking=booking,
+        action=BookingHistoryAction.CREATED,
+        changed_by=changed_by,
+        old_data={},
+        new_data=get_booking_snapshot(booking),
+    )
+
+    return booking
 
 
 def check_booking_conflict(
@@ -206,10 +219,13 @@ def update_booking(
     end_at: datetime | None = None,
     title: str | None = None,
     notes: str | None = None,
+    changed_by=None,
 ) -> Booking:
     locked_booking = _lock_booking(booking=booking)
 
     _validate_booking_can_be_updated(booking=locked_booking)
+
+    old_data = get_booking_snapshot(locked_booking)
 
     target_resource_id = (
         resource.pk if resource is not None else locked_booking.resource_id
@@ -252,11 +268,19 @@ def update_booking(
 
     locked_booking.save(update_fields=update_fields)
 
+    record_booking_history(
+        booking=locked_booking,
+        action=BookingHistoryAction.UPDATED,
+        changed_by=changed_by,
+        old_data=old_data,
+        new_data=get_booking_snapshot(locked_booking),
+    )
+
     return locked_booking
 
 
 @transaction.atomic
-def cancel_booking(*, booking: Booking) -> Booking:
+def cancel_booking(*, booking: Booking, changed_by=None) -> Booking:
     locked_booking = _lock_booking(booking=booking)
 
     if locked_booking.status not in {BookingStatus.PENDING, BookingStatus.CONFIRMED}:
@@ -265,16 +289,26 @@ def cancel_booking(*, booking: Booking) -> Booking:
             code="booking_cannot_be_cancelled",
         )
 
+    old_data = get_booking_snapshot(locked_booking)
+
     locked_booking.status = BookingStatus.CANCELLED
     locked_booking.cancelled_at = timezone.now()
 
     locked_booking.save(update_fields=["status", "cancelled_at", "updated_at"])
 
+    record_booking_history(
+        booking=locked_booking,
+        action=BookingHistoryAction.CANCELLED,
+        changed_by=changed_by,
+        old_data=old_data,
+        new_data=get_booking_snapshot(locked_booking),
+    )
+
     return locked_booking
 
 
 @transaction.atomic
-def complete_booking(*, booking: Booking) -> Booking:
+def complete_booking(*, booking: Booking, changed_by=None) -> Booking:
     locked_booking = _lock_booking(booking=booking)
 
     if locked_booking.status != BookingStatus.CONFIRMED:
@@ -288,8 +322,18 @@ def complete_booking(*, booking: Booking) -> Booking:
             "Booking cannot be completed before it ends.", code="booking_not_finished"
         )
 
+    old_data = get_booking_snapshot(locked_booking)
+
     locked_booking.status = BookingStatus.COMPLETED
 
     locked_booking.save(update_fields=["status", "updated_at"])
+
+    record_booking_history(
+        booking=locked_booking,
+        action=BookingHistoryAction.COMPLETED,
+        changed_by=changed_by,
+        old_data=old_data,
+        new_data=get_booking_snapshot(locked_booking),
+    )
 
     return locked_booking

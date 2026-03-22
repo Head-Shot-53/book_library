@@ -45,6 +45,7 @@ LOCAL_APPS = [
     "apps.accounts.apps.AccountsConfig",
     "apps.resources.apps.ResourcesConfig",
     "apps.bookings.apps.BookingsConfig",
+    "apps.audit.apps.AuditConfig",
 ]
 
 

@@ -55,7 +55,10 @@ class BookingViewSet(
             raise PermissionDenied("You cannot create bookings for another user.")
 
         try:
-            booking = create_booking(user=target_user, **validated_data)
+            booking = create_booking(
+                user=target_user, changed_by=request.user, **validated_data
+            )
+
         except BookingConflictError as exc:
             return self._domain_error_response(exc, status.HTTP_409_CONFLICT)
         except BookingValidationError as exc:
@@ -76,7 +79,12 @@ class BookingViewSet(
         serializer.is_valid(raise_exception=True)
 
         try:
-            booking = update_booking(booking=booking, **serializer.validated_data)
+            booking = update_booking(
+                booking=booking,
+                changed_by=request.user,
+                **serializer.validated_data,
+            )
+
         except BookingConflictError as exc:
             return self._domain_error_response(exc, status.HTTP_409_CONFLICT)
         except BookingValidationError as exc:
@@ -93,7 +101,8 @@ class BookingViewSet(
         booking = self.get_object()
 
         try:
-            booking = cancel_booking(booking=booking)
+            booking = cancel_booking(booking=booking, changed_by=request.user)
+
         except BookingValidationError as exc:
             return self._domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
 
