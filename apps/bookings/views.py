@@ -4,6 +4,9 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.audit.selectors import get_booking_history
+from apps.audit.serializers import BookingHistorySerializer
+
 from .exceptions import BookingConflictError, BookingValidationError
 from .filters import BookingFilter
 from .selectors import can_manage_all_bookings, get_bookings_for_user
@@ -37,6 +40,9 @@ class BookingViewSet(
 
         if self.action == "partial_update":
             return BookingUpdateSerializer
+
+        if self.action == "history":
+            return BookingHistorySerializer
 
         return BookingReadSerializer
 
@@ -121,3 +127,20 @@ class BookingViewSet(
             {"detail": exc.message, "code": exc.code},
             status=response_status,
         )
+
+    @action(detail=True, methods=["get"])
+    def history(self, request, pk=None):
+        booking = self.get_object()
+
+        queryset = get_booking_history(booking=booking)
+
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
