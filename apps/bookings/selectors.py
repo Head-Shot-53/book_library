@@ -10,7 +10,17 @@ from .models import Booking, BookingStatus
 
 
 def can_manage_all_bookings(user) -> bool:
-    return user.is_superuser or user.role in {UserRole.MANAGER, UserRole.ADMIN}
+    return bool(
+        getattr(user, "is_authenticated", False)
+        and (
+            getattr(user, "is_superuser", False)
+            or getattr(user, "role", None)
+            in {
+                UserRole.MANAGER,
+                UserRole.ADMIN,
+            }
+        )
+    )
 
 
 def get_bookings_for_user(*, user) -> QuerySet[Booking]:
@@ -92,8 +102,8 @@ def get_resource_availability(*, resource: Resource, target_date: date) -> dict:
         "date": target_date.isoformat(),
         "timezone": str(current_timezone),
         "working_hours": {
-            "from": resource.available_from.isoformat(),
-            "to": resource.available_to.isoformat(),
+            "available_from": (resource.available_from.isoformat()),
+            "available_to": (resource.available_to.isoformat()),
         },
         "busy_slots": [
             {"start_at": start_at.isoformat(), "end_at": end_at.isoformat()}

@@ -84,3 +84,8 @@ class BookingUpdateSerializer(serializers.Serializer):
 
 class ResourceAvailabilityQuerySerializer(serializers.Serializer):
     date = serializers.DateField()
+
+
+class BookingErrorSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    code = serializers.CharField()

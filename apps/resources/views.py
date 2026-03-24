@@ -1,4 +1,6 @@
 from django.db.models import ProtectedError
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,7 +12,11 @@ from apps.bookings.serializers import ResourceAvailabilityQuerySerializer
 from .filters import ResourceFilter
 from .models import Resource, ResourceCategory
 from .permissions import IsManagerOrAdminForWrite
-from .serializers import ResourceCategorySerializer, ResourceSerializer
+from .serializers import (
+    ResourceAvailabilitySerializer,
+    ResourceCategorySerializer,
+    ResourceSerializer,
+)
 
 
 class ResourceCategoryViewSet(viewsets.ModelViewSet):
@@ -69,6 +75,35 @@ class ResourceViewSet(viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        tags=["Resources"],
+        summary="Get resource availability",
+        description=(
+            "Returns busy intervals and bookable free "
+            "intervals for a resource on the requested date. "
+            "Cancelled bookings do not block availability."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="date",
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description=(
+                    "Date for which resource availability should be calculated."
+                ),
+            ),
+        ],
+        responses={
+            200: ResourceAvailabilitySerializer,
+            400: OpenApiResponse(
+                description=("Missing or invalid date parameter."),
+            ),
+            404: OpenApiResponse(
+                description=("Resource does not exist or is not accessible."),
+            ),
+        },
+    )
     @action(detail=True, methods=["get"])
     def availability(self, request, pk=None):
         resource = self.get_object()

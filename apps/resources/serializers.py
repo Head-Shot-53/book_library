@@ -34,3 +34,30 @@ class ResourceSerializer(serializers.ModelSerializer):
         )
 
         read_only_fields = ("id", "created_at", "updated_at")
+
+
+class AvailabilityResourceSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class WorkingHoursSerializer(serializers.Serializer):
+    available_from = serializers.TimeField()
+    available_to = serializers.TimeField()
+
+
+class AvailabilitySlotSerializer(serializers.Serializer):
+    start_at = serializers.DateTimeField()
+    end_at = serializers.DateTimeField()
+
+
+class ResourceAvailabilitySerializer(serializers.Serializer):
+    resource = AvailabilityResourceSerializer()
+    date = serializers.DateField()
+    timezone = serializers.CharField()
+
+    working_hours = WorkingHoursSerializer()
+
+    busy_slots = AvailabilitySlotSerializer(many=True)
+
+    available_slots = AvailabilitySlotSerializer(many=True)
