@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from apps.audit.selectors import get_booking_history
 from apps.audit.serializers import BookingHistorySerializer
 
-from .exceptions import BookingConflictError, BookingValidationError
+# from .exceptions import BookingConflictError, BookingValidationError
 from .filters import BookingFilter
 from .models import Booking
 from .selectors import can_manage_all_bookings, get_bookings_for_user
@@ -127,15 +127,9 @@ class BookingViewSet(
         elif target_user != request.user and not can_manage_all_bookings(request.user):
             raise PermissionDenied("You cannot create bookings for another user.")
 
-        try:
-            booking = create_booking(
-                user=target_user, changed_by=request.user, **validated_data
-            )
-
-        except BookingConflictError as exc:
-            return self._domain_error_response(exc, status.HTTP_409_CONFLICT)
-        except BookingValidationError as exc:
-            return self._domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
+        booking = create_booking(
+            user=target_user, changed_by=request.user, **validated_data
+        )
 
         output_serializer = BookingReadSerializer(
             booking, context=self.get_serializer_context()
@@ -189,17 +183,11 @@ class BookingViewSet(
 
         serializer.is_valid(raise_exception=True)
 
-        try:
-            booking = update_booking(
-                booking=booking,
-                changed_by=request.user,
-                **serializer.validated_data,
-            )
-
-        except BookingConflictError as exc:
-            return self._domain_error_response(exc, status.HTTP_409_CONFLICT)
-        except BookingValidationError as exc:
-            return self._domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
+        booking = update_booking(
+            booking=booking,
+            changed_by=request.user,
+            **serializer.validated_data,
+        )
 
         output_serializer = BookingReadSerializer(
             booking, context=self.get_serializer_context()
@@ -231,27 +219,16 @@ class BookingViewSet(
     def cancel(self, request, pk=None):
         booking = self.get_object()
 
-        try:
-            booking = cancel_booking(booking=booking, changed_by=request.user)
-
-        except BookingValidationError as exc:
-            return self._domain_error_response(exc, status.HTTP_400_BAD_REQUEST)
+        booking = cancel_booking(
+            booking=booking,
+            changed_by=request.user,
+        )
 
         output_serializer = BookingReadSerializer(
             booking, context=self.get_serializer_context()
         )
 
         return Response(output_serializer.data, status=status.HTTP_200_OK)
-
-    @staticmethod
-    def _domain_error_response(
-        exc,
-        response_status,
-    ):
-        return Response(
-            {"detail": exc.message, "code": exc.code},
-            status=response_status,
-        )
 
     @extend_schema(
         tags=["Booking History"],

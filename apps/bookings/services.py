@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from django.db import transaction
@@ -9,6 +10,8 @@ from apps.resources.models import Resource
 
 from .exceptions import BookingConflictError, BookingStateError, BookingValidationError
 from .models import Booking, BookingStatus
+
+logger = logging.getLogger("booking_management.booking")
 
 
 def validate_booking_creation(
@@ -134,6 +137,20 @@ def create_booking(
         changed_by=changed_by,
         old_data={},
         new_data=get_booking_snapshot(booking),
+    )
+
+    logger.info(
+        "booking_created",
+        extra={
+            "booking_id": booking.id,
+            "resource_id": booking.resource_id,
+            "owner_id": booking.user_id,
+            "actor_id": getattr(
+                changed_by,
+                "id",
+                None,
+            ),
+        },
     )
 
     return booking
@@ -276,6 +293,20 @@ def update_booking(
         new_data=get_booking_snapshot(locked_booking),
     )
 
+    logger.info(
+        "booking_updated",
+        extra={
+            "booking_id": locked_booking.id,
+            "resource_id": (locked_booking.resource_id),
+            "owner_id": locked_booking.user_id,
+            "actor_id": getattr(
+                changed_by,
+                "id",
+                None,
+            ),
+        },
+    )
+
     return locked_booking
 
 
@@ -302,6 +333,20 @@ def cancel_booking(*, booking: Booking, changed_by=None) -> Booking:
         changed_by=changed_by,
         old_data=old_data,
         new_data=get_booking_snapshot(locked_booking),
+    )
+
+    logger.info(
+        "booking_cancelled",
+        extra={
+            "booking_id": locked_booking.id,
+            "resource_id": (locked_booking.resource_id),
+            "owner_id": locked_booking.user_id,
+            "actor_id": getattr(
+                changed_by,
+                "id",
+                None,
+            ),
+        },
     )
 
     return locked_booking
@@ -334,6 +379,20 @@ def complete_booking(*, booking: Booking, changed_by=None) -> Booking:
         changed_by=changed_by,
         old_data=old_data,
         new_data=get_booking_snapshot(locked_booking),
+    )
+
+    logger.info(
+        "booking_completed",
+        extra={
+            "booking_id": locked_booking.id,
+            "resource_id": (locked_booking.resource_id),
+            "owner_id": locked_booking.user_id,
+            "actor_id": getattr(
+                changed_by,
+                "id",
+                None,
+            ),
+        },
     )
 
     return locked_booking
