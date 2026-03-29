@@ -23,6 +23,10 @@ The project focuses on production-oriented backend concepts rather than simple C
 - SimpleJWT
 - django-filter
 - drf-spectacular
+- Redis
+- Celery
+- Celery Beat
+- django-celery-beat
 ### Database
 - PostgreSQL 16
 ### Infrastructure
