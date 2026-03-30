@@ -24,6 +24,11 @@ class JsonFormatter(logging.Formatter):
         "booking_id",
         "resource_id",
         "error_code",
+        "task_id",
+        "processed_count",
+        "completed_count",
+        "skipped_count",
+        "failed_count",
     )
 
     def format(self, record: logging.LogRecord) -> str:

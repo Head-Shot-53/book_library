@@ -114,3 +114,13 @@ def get_resource_availability(*, resource: Resource, target_date: date) -> dict:
             for start_at, end_at in available_intervals
         ],
     }
+
+
+def get_expired_confirmed_booking_ids(
+    *, current_time: datetime, limit: int = 100
+) -> list[int]:
+    return list(
+        Booking.objects.filter(status=BookingStatus.CONFIRMED, end_at__lte=current_time)
+        .order_by("end_at", "id")
+        .values_list("id", flat=True)[:limit]
+    )
